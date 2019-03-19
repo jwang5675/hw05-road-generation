@@ -8,10 +8,32 @@ import Camera from './Camera';
 import {setGL} from './globals';
 import ShaderProgram, {Shader} from './rendering/gl/ShaderProgram';
 
+let mapVal: number = 0;
+
 // Define an object with application parameters and button callbacks
 // This will be referred to by dat.GUI's functions that add GUI elements.
 const controls = {
+  'Show Water': showWater,
+  'Show Elevation': showElevation,
+  'Show Population Density': showPopulationDensity,
+  'Elevation & Pop Density': showElevationAndDensity,
 };
+
+function showWater() {
+  mapVal = 0;
+}
+
+function showElevation() {
+  mapVal = 1;
+}
+
+function showPopulationDensity() {
+  mapVal = 2;
+}
+
+function showElevationAndDensity() {
+  mapVal = 3;
+}
 
 let square: Square;
 let screenQuad: ScreenQuad;
@@ -60,6 +82,11 @@ function main() {
 
   // Add controls to the gui
   const gui = new DAT.GUI();
+  gui.add(controls, 'Show Water');
+  gui.add(controls, 'Show Elevation');
+  gui.add(controls, 'Show Population Density');
+  gui.add(controls, 'Elevation & Pop Density');
+
 
   // get canvas and webgl context
   const canvas = <HTMLCanvasElement> document.getElementById('canvas');
@@ -78,8 +105,8 @@ function main() {
 
   const renderer = new OpenGLRenderer(canvas);
   renderer.setClearColor(0.2, 0.2, 0.2, 1);
-  gl.enable(gl.BLEND);
-  gl.blendFunc(gl.ONE, gl.ONE); // Additive blending
+  gl.enable(gl.DEPTH_TEST)
+  gl.blendFunc(gl.ONE, gl.ONE);
 
   const instancedShader = new ShaderProgram([
     new Shader(gl.VERTEX_SHADER, require('./shaders/instanced-vert.glsl')),
@@ -96,12 +123,12 @@ function main() {
     camera.update();
     stats.begin();
     instancedShader.setTime(time);
-    flat.setTime(time++);
+    flat.setTime(mapVal);
     gl.viewport(0, 0, window.innerWidth, window.innerHeight);
     renderer.clear();
     renderer.render(camera, flat, [screenQuad]);
     renderer.render(camera, instancedShader, [
-      square,
+      //square,
     ]);
     stats.end();
 
@@ -120,6 +147,50 @@ function main() {
   camera.setAspectRatio(window.innerWidth / window.innerHeight);
   camera.updateProjectionMatrix();
   flat.setDimensions(window.innerWidth, window.innerHeight);
+
+  /** Texture Renderer starts here **/
+  const texturecanvas = <HTMLCanvasElement> document.getElementById('texturecanvas');
+  const textureRenderer = new OpenGLRenderer(texturecanvas);
+
+  const width = 1000;
+  const height = 1000;
+
+  textureRenderer.setSize(width, height);
+  textureRenderer.setClearColor(0, 0, 1, 1);
+
+  flat.setTime(0);
+  let waterData = textureRenderer.renderTexture(camera, flat, [screenQuad]);
+  let counter = 0;
+  for (let i = 0; i < width * height * 4; i++) {
+    if (waterData[i] != 255) {
+      counter = counter + 1;
+    }
+  }
+  counter = counter / (width * height * 4);
+  console.log("Water data: " + counter);
+
+  flat.setTime(1);
+  let elevationData = textureRenderer.renderTexture(camera, flat, [screenQuad]);
+  counter = 0;
+  for (let i = 0; i < width * height * 4; i++) {
+    if (elevationData[i] != 255) {
+      counter = counter + 1;
+    }
+  }
+  counter = counter / (width * height * 4);
+  console.log("Elevation data: " + counter);
+
+  flat.setTime(2);
+  let populationData = textureRenderer.renderTexture(camera, flat, [screenQuad]);
+  counter = 0;
+  for (let i = 0; i < width * height * 4; i++) {
+    if (populationData[i] != 255) {
+      counter = counter + 1;
+    }
+  }
+  counter = counter / (width * height * 4);
+  console.log("Population data: " + counter);
+  /** Texture Renderer ends here **/
 
   // Start the render loop
   tick();
