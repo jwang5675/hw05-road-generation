@@ -60,24 +60,13 @@ export default class Turtle {
   // Checks if the local turtle satisfies local constraints (recursion limit, snap, water)
   localConstraints(expandedTurtle: Turtle) {
     // Recursion Limit Check
-    if (expandedTurtle.recursionDepth > 10) {
+    if (expandedTurtle.recursionDepth > 12) {
       return null;
     }
 
     if (this.position.position[0] < 0 || this.position.position[0] > 2000 ||
         this.position.position[2] < 0 || this.position.position[2] > 2000) {
       return null;
-    }
-
-    // Point Snap Check
-    for (let i: number = 0; i < this.points.length; i++) {
-      let currPoint: Point = this.points[i];
-      if (expandedTurtle.position.withinCircle(currPoint.position, 0.5 * this.lengthTraveled)) {
-        expandedTurtle.position = currPoint;
-        let newEdge = new Edge(this.position, expandedTurtle.position, false);
-        this.edges.push(newEdge);
-        return null;
-      }
     }
 
     // Line Segment Check
@@ -102,6 +91,17 @@ export default class Turtle {
       }
     }
 
+    // Point Snap Check
+    for (let i: number = 0; i < this.points.length; i++) {
+      let currPoint: Point = this.points[i];
+      if (expandedTurtle.position.withinCircle(currPoint.position, 0.5 * this.lengthTraveled)) {
+        expandedTurtle.position = currPoint;
+        let newEdge = new Edge(this.position, expandedTurtle.position, false);
+        this.edges.push(newEdge);
+        return null;
+      }
+    }
+
     // Water Check
     if (this.textureUtil.getWater(expandedTurtle.position.position[0], expandedTurtle.position.position[2]) == 0) {
       return null;
@@ -116,14 +116,14 @@ export default class Turtle {
 
   // Returns the length to move turtle based on the density
   globalGoals() {
-    //return 50;
-    let populationDensity: number = this.textureUtil.getPopulation(this.position.position[0], this.position.position[2]);
-    if (populationDensity > 0.6) {
-      return 50;
-    } else {
-      let normalizedDensity = (populationDensity - 0.4) / 0.2;
-      return 50 + 50 * (1 - normalizedDensity);
-    }
+    return 70;
+    // let populationDensity: number = this.textureUtil.getPopulation(this.position.position[0], this.position.position[2]);
+    // if (populationDensity > 0.6) {
+    //   return 50;
+    // } else {
+    //   let normalizedDensity = (populationDensity - 0.4) / 0.2;
+    //   return 50 + 50 * (1 - normalizedDensity);
+    // }
   }
 
   // Creates a copy turtle instance to add to the turtle stack
@@ -174,7 +174,8 @@ export default class Turtle {
 
     return expansionTurtles;
   }
-
+  
+  // Returns a list of the next turtles that spawn from the current turtle
   simulate() {
     let possibleExpansionTurtles: Turtle[] = this.expansionRule();
     let validExpansionTurtles: Turtle[] = [];

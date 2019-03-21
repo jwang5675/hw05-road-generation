@@ -18,44 +18,34 @@ export default class LSystem {
 	}
 
 	generateHighway() {
-		let turtleStack: HighwayTurtle[] = [];
+		let turtleStack: any[] = [];
 
 		// Start Highway Turtle L-System
 		let startingPoint: Point = new Point(vec3.fromValues(560, 0, 1790));
-		this.points.push(startingPoint);
+		let forward: vec3 = vec3.fromValues(0, 0, 1);
+		let right: vec3 = vec3.fromValues(1, 0, 0);
+		let up: vec3 = vec3.fromValues(0, 1, 0);
+		let q: quat = quat.fromValues(0, 0, 0, 1);
 
-		let startingDir1: vec3 = vec3.fromValues(-1, 0, 0.5);
-		vec3.normalize(startingDir1, startingDir1);
-		let highwayTurtle1: HighwayTurtle = new HighwayTurtle(startingPoint, startingDir1, true, false,
+		let target1: Point = new Point(vec3.fromValues(0, 0, 950));
+		let highwayTurtle1: HighwayTurtle = new HighwayTurtle(startingPoint, forward, up, right, q,
+																													target1, true, false, true,
 																													this.textureUtil, this.points, this.edges);
+		highwayTurtle1.rotateByUpAxis(-45);	
+
+		let target2: Point = new Point(vec3.fromValues(850, 0, 2000));
+		let highwayTurtle2: HighwayTurtle = new HighwayTurtle(startingPoint, forward, up, right, q,
+																													target2, false, false, true,
+																													this.textureUtil, this.points, this.edges);
+
 		turtleStack.push(highwayTurtle1);
-
-		let startingDir2: vec3 = vec3.fromValues(0, 0, 1);
-		let highwayTurtle2: HighwayTurtle = new HighwayTurtle(startingPoint, startingDir2, false, false, 
-																													this.textureUtil, this.points, this.edges);
 		turtleStack.push(highwayTurtle2);
 
-		let cityCenter0: Point = new Point(vec3.fromValues(420, 0, 1890));
-		let cityCenter1: Point = new Point(vec3. fromValues(380, 0, 2000));
-		this.edges.push(new Edge(cityCenter0, cityCenter1, true));
-
-		let cityCenter2: Point = new Point(vec3.fromValues(850, 0, 1600));
-		this.edges.push(new Edge(cityCenter0, cityCenter2, true));
-
-		let cityCenter3: Point = new Point(vec3. fromValues(740, 0, 800));
-		this.edges.push(new Edge(cityCenter2, cityCenter3, true));
-
-		let cityCenter4: Point = new Point(vec3. fromValues(2000, 0, 80));
-		this.edges.push(new Edge(cityCenter3, cityCenter4, true));
-
-		let cityCenter5: Point = new Point(vec3. fromValues(0, 0, 380));
-		this.edges.push(new Edge(cityCenter3, cityCenter5, true));
-
 		while (turtleStack.length != 0) {
-			let currTurtle: HighwayTurtle = turtleStack.pop();
-			let expandedTurtle: HighwayTurtle = currTurtle.simulate();
-			if (expandedTurtle) {
-				turtleStack.push(expandedTurtle);
+			let currTurtle = turtleStack.pop();
+			let expandedTurtles = currTurtle.simulate();
+			for (let i: number = 0; i < expandedTurtles.length; i++) {
+				turtleStack.push(expandedTurtles[i]);
 			}
 		}
 	}
@@ -97,7 +87,7 @@ export default class LSystem {
 	// Simulate the road generation L-System once based on number of iterations
 	simulate(iterations: number) {
 		this.generateHighway();
-		this.generateRoads();
+		//this.generateRoads();
 	}
 
 	// Returns the VBO Data from the current iteration of the LSystem

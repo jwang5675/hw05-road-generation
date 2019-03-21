@@ -2,43 +2,103 @@ import {vec3, mat4, quat} from 'gl-matrix';
 import Point from '../lsystem/Point';
 import Edge from '../lsystem/Edge';
 import TextureUtil from '../lsystem/TextureUtil';
+import Turtle from '../lsystem/Turtle';
 
 
 export default class HighwayTurtle {
-  position: Point;
+  point: Point;
   forward: vec3 = vec3.create();
+  up: vec3 = vec3.create();
+  right: vec3 = vec3.create();
+  quaternion: quat = quat.create();
+
+  target: Point;
   rotationFlag: boolean;
   waterFlag: boolean;
+  expandFlag: boolean;
   
   textureUtil: TextureUtil;
   points: Point[];
   edges: Edge[];
 
-  constructor(point: Point, dir: vec3, rotationFlag: boolean, waterFlag: boolean, 
+  constructor(point: Point, forward: vec3, up: vec3, right: vec3, q: quat,
+              target: Point, rotationFlag: boolean, waterFlag: boolean, expandFlag: boolean,
               textureUtil: TextureUtil, points: Point[], edges: Edge[]) {
-    this.position = point;
-    this.forward = vec3.fromValues(dir[0], dir[1], dir[2]);
-    vec3.normalize(this.forward, this.forward);
+    
+    this.point = point;
+    this.forward = vec3.fromValues(forward[0], forward[1], forward[2]);
+    this.up = vec3.fromValues(up[0], up[1], up[2]);
+    this.right = vec3.fromValues(right[0], right[1], right[2]);
+    this.quaternion = quat.fromValues(q[0], q[1], q[2], q[3]);
+
+    this.target = target;
     this.rotationFlag = rotationFlag;
     this.waterFlag = waterFlag;
+    this.expandFlag = expandFlag;
+
     this.textureUtil = textureUtil;
     this.points = points;
     this.edges = edges;
+
+    if (this.waterFlag) {
+      let direction: vec3 = vec3.create();
+      vec3.subtract(direction, this.target.position, this.point.position);
+      vec3.normalize(direction, direction);
+      let angle: number = this.getCounterClockwiseAngle(this.forward, direction);
+      this.rotateByUpAxis(angle * 180 / Math.PI);
+    }
+  }
+
+  getCounterClockwiseAngle(p1: vec3, p2: vec3) {
+    let x1 = p1[0];
+    let y1 = p1[2];
+
+    let x2 = p2[0];
+    let y2 = p2[2];
+
+    let dot = x1 * x2 + y1 * y2;
+    let det = x1 * y2 - y1 * x2;
+    return -Math.atan2(det, dot);
+  }
+
+  rotateByUpAxis(degrees: number) {
+    let q: quat = quat.create();
+    quat.setAxisAngle(q, this.up, degrees * Math.PI / 180.0);
+
+    let rotationMatrix: mat4 = mat4.create();
+    mat4.fromQuat(rotationMatrix, q);
+    vec3.transformMat4(this.forward, this.forward, rotationMatrix);
+    vec3.normalize(this.forward, this.forward);
+    vec3.transformMat4(this.right, this.right, rotationMatrix);
+    vec3.normalize(this.right, this.right);
+
+    // Save the current rotation in our turtle's quaternion
+    quat.rotationTo(this.quaternion, vec3.fromValues(0, 1, 0), this.forward);
   }
 
   // Simple Local Constraint, check if out of bounds or in water
-  localConstraints(startPoint: Point, endPoint: Point) {
-    if (startPoint.position[0] < 0 || startPoint.position[0] > 2000 ||
-        startPoint.position[2] < 0 || startPoint.position[2] > 2000) {
-      return false;
+  localConstraints(turtle: HighwayTurtle) {
+    // Check if turtle is out of bounds
+    if (this.point.position[0] < 0 || this.point.position[0] > 2000 ||
+        this.point.position[2] < 0 || this.point.position[2] > 2000) {
+      return null;
     }
 
+    // check if our turtle is near our target, end search if we reach it
+    if (this.target.withinCircle(turtle.point.position, 50)) {
+      let newEdge = new Edge(this.point, this.target, true);
+      this.points.push(this.target);
+      this.edges.push(newEdge);
+      return null;
+    }
+
+    // Check if the current turtle can walk on water
     if (this.waterFlag) {
-      return true;
+      return turtle;
     }
 
-    let x = endPoint.position[0];
-    let y = endPoint.position[2];
+    let x = turtle.point.position[0];
+    let y = turtle.point.position[2];
 
     // Rotate for map bound at most 360 degrees;
     let angle = this.rotationFlag ? -10 * Math.PI / 180 : 10 * Math.PI / 180;
@@ -47,72 +107,193 @@ export default class HighwayTurtle {
 
     // Check for water itersection, rotate the point until it does not hit water
     while (this.textureUtil.getWater(x, y) == 0) {
-      vec3.rotateY(endPoint.position, endPoint.position, startPoint.position, angle);
-      x = endPoint.position[0];
-      y = endPoint.position[2];
+      vec3.rotateY(turtle.point.position, turtle.point.position, this.point.position, angle);
+      turtle.rotateByUpAxis(angle);
+      x = turtle.point.position[0];
+      y = turtle.point.position[2];
       counter = counter + 1;
       if (counter == maxSteps) {
-        return false;
+        return null;
       }
     }
 
-    return true;
+    return turtle;
   }
 
   // Simple Global Constraint by population density
   globalGoals(expandedPoint: Point) {
-    let x = expandedPoint.position[0];
-    let y = expandedPoint.position[2];
-    let populationDensity = this.textureUtil.getPopulation(x, y);
-
-    if (populationDensity > 0.2) {
-      let xpos = expandedPoint.position[0] + 70 * this.forward[0];
-      let ypos = expandedPoint.position[1] + 70 * this.forward[1];
-      let zpos = expandedPoint.position[2] + 70 * this.forward[2];
-      expandedPoint.position = vec3.fromValues(xpos, ypos, zpos);
-    } else {
-      let xpos = expandedPoint.position[0] + 70 * this.forward[0];
-      let ypos = expandedPoint.position[1] + 70 * this.forward[1];
-      let zpos = expandedPoint.position[2] + 70 * this.forward[2];
-      expandedPoint.position = vec3.fromValues(xpos, ypos, zpos);
-    }
+    let xpos = expandedPoint.position[0] + 70 * this.forward[0];
+    let ypos = expandedPoint.position[1] + 70 * this.forward[1];
+    let zpos = expandedPoint.position[2] + 70 * this.forward[2];
+    expandedPoint.position = vec3.fromValues(xpos, ypos, zpos);
   }
 
   // Simple expansion rule, expands the turtle by moving forward
   expansionRule() {
-    let x = this.position.position[0];
-    let y = this.position.position[1];
-    let z = this.position.position[2];
-    return new Point(vec3.fromValues(x, y, z));
+    let expansionTurtles = [];
+    let x = this.point.position[0];
+    let y = this.point.position[1];
+    let z = this.point.position[2];
+    let expandedPoint = new Point(vec3.fromValues(x, y, z));
+    this.globalGoals(expandedPoint);
+    expansionTurtles.push(this.createNextHighwayTurtle(expandedPoint));
+    return expansionTurtles;
   }
 
-  createNextTurtle(newPoint: Point) {
-    return new HighwayTurtle(newPoint, this.forward, this.rotationFlag, this.waterFlag,
+  expansionRuleFirstExpansion() {
+    let expansionTurtles = [];
+    if (this.expandFlag && !this.waterFlag) {
+      if (!this.rotationFlag) {
+        let cityCenter0: Point = new Point(vec3.fromValues(420, 0, 1890));
+        let cityCenter1: Point = new Point(vec3. fromValues(380, 0, 2000));
+        expansionTurtles.push(this.createNextHighwayTurtleNewTarget(cityCenter0, cityCenter1));
+
+        let cityCenter2: Point = new Point(vec3.fromValues(850, 0, 1600));
+        expansionTurtles.push(this.createNextHighwayTurtleNewTarget(cityCenter0, cityCenter2));
+
+        let cityCenter3: Point = new Point(vec3. fromValues(740, 0, 800));
+        expansionTurtles.push(this.createNextHighwayTurtleNewTarget(cityCenter2, cityCenter3));
+
+        let cityCenter4: Point = new Point(vec3. fromValues(2000, 0, 80));
+        expansionTurtles.push(this.createNextHighwayTurtleNewTarget(cityCenter3, cityCenter4));
+
+        let cityCenter5: Point = new Point(vec3. fromValues(0, 0, 380));
+        expansionTurtles.push(this.createNextHighwayTurtleNewTarget(cityCenter3, cityCenter5));
+      }
+    }
+    return expansionTurtles;
+  }
+
+  createNextHighwayTurtle(newPoint: Point) {
+    let newFor: vec3 = vec3.create();
+    vec3.copy(newFor, this.forward);
+
+    let newUp: vec3 = vec3.create();
+    vec3.copy(newUp, this.up);
+
+    let newRight: vec3 = vec3.create();
+    vec3.copy(newRight, this.right);
+
+    let newQuat: quat = quat.create();
+    quat.copy(newQuat, this.quaternion);
+
+    return new HighwayTurtle(newPoint, newFor, newUp, newRight, newQuat,
+                             this.target, this.rotationFlag, this.waterFlag, false,
                              this.textureUtil, this.points, this.edges);
   }
 
-  simulate() {
-    let simulationFlag = true;
-    let maxIterations = 100;
-    let counter = 0;
+  createNextHighwayTurtleNewTarget(newPoint: Point, newTarget: Point) {
+    let newFor: vec3 = vec3.create();
+    vec3.copy(newFor, this.forward);
 
-    // Get the expanded point from expansion rules
-    let expandedPoint = this.expansionRule();
+    let newUp: vec3 = vec3.create();
+    vec3.copy(newUp, this.up);
 
-    // Modified the point given the global goals
-    this.globalGoals(expandedPoint);
+    let newRight: vec3 = vec3.create();
+    vec3.copy(newRight, this.right);
 
-    // Test the point on local constraints
-    let result = this.localConstraints(this.position, expandedPoint);
+    let newQuat: quat = quat.create();
+    quat.copy(newQuat, this.quaternion);
 
-    // If successful, make a new edge and add it to the edges map, returning turtle result
-    if (result) {
-      let newEdge = new Edge(this.position, expandedPoint, true);
-      this.points.push(expandedPoint);
-      this.edges.push(newEdge);
-      return this.createNextTurtle(expandedPoint);
-    } else {
+    return new HighwayTurtle(newPoint, newFor, newUp, newRight, newQuat,
+                             newTarget, this.rotationFlag, true, false,
+                             this.textureUtil, this.points, this.edges);
+  }
+
+  roadTurtleConstraints(newOrigin: Point, expandedTurtle: Turtle) {
+    // Line Segment Check
+    let feeler: vec3 = vec3.create();
+    let translation: vec3 = vec3.fromValues(expandedTurtle.forward[0], expandedTurtle.forward[1], expandedTurtle.forward[2]);
+    vec3.add(feeler, newOrigin.position, translation);
+
+    for (let i: number = 0; i < this.edges.length; i++) {
+      let currEdge: Edge = this.edges[i];
+      let possibleIntersection: Point = currEdge.intersectionCheck(new Point(feeler), expandedTurtle.position);
+      if (possibleIntersection) {
+        return null;
+      }
+    }
+
+    // Point Snap Check
+    for (let i: number = 0; i < this.points.length; i++) {
+      let currPoint: Point = this.points[i];
+      if (expandedTurtle.position.withinCircle(currPoint.position, 25)) {
+        return null;
+      }
+    }
+
+    // Water Check
+    if (this.textureUtil.getWater(expandedTurtle.position.position[0], expandedTurtle.position.position[2]) == 0) {
       return null;
     }
+
+    let newEdge = new Edge(newOrigin, expandedTurtle.position, false);
+    this.edges.push(newEdge);
+    return expandedTurtle
+  }
+
+  createRoadTurtle(expandedPos: vec3) {
+    let newPoint: Point = new Point(expandedPos);
+
+    let newFor: vec3 = vec3.create();
+    vec3.copy(newFor, this.forward);
+
+    let newUp: vec3 = vec3.create();
+    vec3.copy(newUp, this.up);
+
+    let newRight: vec3 = vec3.create();
+    vec3.copy(newRight, this.right);
+
+    let newQuat: quat = quat.create();
+    quat.copy(newQuat, this.quaternion);
+ 
+    return new Turtle(newPoint, newFor, newUp, newRight, newQuat, 0,
+                      this.textureUtil, this.points, this.edges);
+  }
+
+  // Expands a road turtle off of a highway turtle
+  roadTurtleExpansionRule(currExpansionTurtle: HighwayTurtle, validExpansionTurtles: any[]) {
+    let branchRight = vec3.create();
+    branchRight = vec3.fromValues(currExpansionTurtle.point.position[0] + 70 * currExpansionTurtle.right[0], 
+                                  currExpansionTurtle.point.position[1] + 70 * currExpansionTurtle.right[1], 
+                                  currExpansionTurtle.point.position[2] + 70 * currExpansionTurtle.right[2]); 
+    let rightTurtle = this.roadTurtleConstraints(currExpansionTurtle.point, this.createRoadTurtle(branchRight));
+    if (rightTurtle != null) {
+      validExpansionTurtles.push(rightTurtle);
+    }
+
+    let branchLeft = vec3.create();
+    branchLeft = vec3.fromValues(currExpansionTurtle.point.position[0] - 70 * currExpansionTurtle.right[0], 
+                                 currExpansionTurtle.point.position[1] - 70 * currExpansionTurtle.right[1], 
+                                 currExpansionTurtle.point.position[2] - 70 * currExpansionTurtle.right[2]); 
+    let leftTurtle = this.roadTurtleConstraints(currExpansionTurtle.point, this.createRoadTurtle(branchLeft));
+    if (leftTurtle != null) {
+      validExpansionTurtles.push(leftTurtle);
+    }
+  }
+
+  // Returns a list of the next turtles that spawn from the current turtle
+  simulate(): any[] {
+    let possibleExpansionTurtles: any[] = this.expansionRule();
+    let validExpansionTurtles: any[] = this.expansionRuleFirstExpansion();
+
+    for (let i: number = 0; i < possibleExpansionTurtles.length; i++) {
+      let currExpansionTurtle = this.localConstraints(possibleExpansionTurtles[i]);
+
+      // Adds new highway turtle to expanded turtles returned
+      if (currExpansionTurtle) {
+        let newEdge = new Edge(this.point, currExpansionTurtle.point, true);
+        this.points.push(currExpansionTurtle.point);
+        this.edges.push(newEdge);
+        validExpansionTurtles.push(currExpansionTurtle);
+
+        // Expands new road turtles from the highway
+        if (this.waterFlag) {
+          this.roadTurtleExpansionRule(currExpansionTurtle, validExpansionTurtles);
+        }
+      }
+    }
+
+    return validExpansionTurtles;
   }
 }
