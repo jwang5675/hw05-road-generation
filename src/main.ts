@@ -7,8 +7,7 @@ import OpenGLRenderer from './rendering/gl/OpenGLRenderer';
 import Camera from './Camera';
 import {setGL} from './globals';
 import ShaderProgram, {Shader} from './rendering/gl/ShaderProgram';
-
-let mapVal: number = 0;
+import LSystem from './LSystem/LSystem';
 
 // Define an object with application parameters and button callbacks
 // This will be referred to by dat.GUI's functions that add GUI elements.
@@ -18,6 +17,8 @@ const controls = {
   'Show Population Density': showPopulationDensity,
   'Elevation & Pop Density': showElevationAndDensity,
 };
+
+let mapVal: number = 0;
 
 function showWater() {
   mapVal = 0;
@@ -38,37 +39,23 @@ function showElevationAndDensity() {
 let square: Square;
 let screenQuad: ScreenQuad;
 let time: number = 0.0;
+let lsystem: LSystem;
 
 function loadScene() {
   square = new Square();
   square.create();
   screenQuad = new ScreenQuad();
   screenQuad.create();
+}
 
-  // Set up instanced rendering data arrays here.
-  // This example creates a set of positional
-  // offsets and gradiated colors for a 100x100 grid
-  // of squares, even though the VBO data for just
-  // one square is actually passed to the GPU
-  let offsetsArray = [];
-  let colorsArray = [];
-  let n: number = 100.0;
-  for(let i = 0; i < n; i++) {
-    for(let j = 0; j < n; j++) {
-      offsetsArray.push(i);
-      offsetsArray.push(j);
-      offsetsArray.push(0);
+function runLSystem() {
+  // Simulate LSystem with number of iterations
+  lsystem.simulate(0);
 
-      colorsArray.push(i / n);
-      colorsArray.push(j / n);
-      colorsArray.push(1.0);
-      colorsArray.push(1.0); // Alpha channel
-    }
-  }
-  let offsets: Float32Array = new Float32Array(offsetsArray);
-  let colors: Float32Array = new Float32Array(colorsArray);
-  square.setInstanceVBOs(offsets, colors);
-  square.setNumInstances(n * n); // grid of "particles"
+  // Instance Render the road data
+  let vboData: any = lsystem.getVBOData();
+  square.setInstanceVBOsFullTransform(vboData.col1, vboData.col2, vboData.col3, vboData.col4, vboData.colors);
+  square.setNumInstances(vboData.col1.length / 4.0);
 }
 
 function main() {
@@ -101,7 +88,7 @@ function main() {
   // Initial call to load scene
   loadScene();
 
-  const camera = new Camera(vec3.fromValues(50, 50, 10), vec3.fromValues(50, 50, 0));
+  const camera = new Camera(vec3.fromValues(0, 0, 150), vec3.fromValues(0, 0, 0));
 
   const renderer = new OpenGLRenderer(canvas);
   renderer.setClearColor(0.2, 0.2, 0.2, 1);
@@ -122,14 +109,15 @@ function main() {
   function tick() {
     camera.update();
     stats.begin();
+
+    //runLSystem();
+
     instancedShader.setTime(time);
     flat.setTime(mapVal);
     gl.viewport(0, 0, window.innerWidth, window.innerHeight);
     renderer.clear();
     renderer.render(camera, flat, [screenQuad]);
-    renderer.render(camera, instancedShader, [
-      //square,
-    ]);
+    renderer.render(camera, instancedShader, [square]);
     stats.end();
 
     // Tell the browser to call `tick` again whenever it renders a new frame
@@ -148,49 +136,27 @@ function main() {
   camera.updateProjectionMatrix();
   flat.setDimensions(window.innerWidth, window.innerHeight);
 
-  /** Texture Renderer starts here **/
+  /** Texture Renderer and LSystem Setup Start Here **/
+  const textureShader = new ShaderProgram([
+    new Shader(gl.VERTEX_SHADER, require('./shaders/texture-vert.glsl')),
+    new Shader(gl.FRAGMENT_SHADER, require('./shaders/texture-frag.glsl')),
+  ]);
+
   const texturecanvas = <HTMLCanvasElement> document.getElementById('texturecanvas');
   const textureRenderer = new OpenGLRenderer(texturecanvas);
 
-  const width = 1000;
-  const height = 1000;
+  // width of the texture, this is our resolution for our L-system
+  const width = 2000;
+  const height = 2000;
 
   textureRenderer.setSize(width, height);
   textureRenderer.setClearColor(0, 0, 1, 1);
 
-  flat.setTime(0);
-  let waterData = textureRenderer.renderTexture(camera, flat, [screenQuad]);
-  let counter = 0;
-  for (let i = 0; i < width * height * 4; i++) {
-    if (waterData[i] != 255) {
-      counter = counter + 1;
-    }
-  }
-  counter = counter / (width * height * 4);
-  console.log("Water data: " + counter);
+  let textureData: Uint8Array = textureRenderer.renderTexture(camera, textureShader, [screenQuad]);
 
-  flat.setTime(1);
-  let elevationData = textureRenderer.renderTexture(camera, flat, [screenQuad]);
-  counter = 0;
-  for (let i = 0; i < width * height * 4; i++) {
-    if (elevationData[i] != 255) {
-      counter = counter + 1;
-    }
-  }
-  counter = counter / (width * height * 4);
-  console.log("Elevation data: " + counter);
-
-  flat.setTime(2);
-  let populationData = textureRenderer.renderTexture(camera, flat, [screenQuad]);
-  counter = 0;
-  for (let i = 0; i < width * height * 4; i++) {
-    if (populationData[i] != 255) {
-      counter = counter + 1;
-    }
-  }
-  counter = counter / (width * height * 4);
-  console.log("Population data: " + counter);
-  /** Texture Renderer ends here **/
+  lsystem = new LSystem(textureData);
+  runLSystem();
+  /** Texture Renderer and LSystem Setup End Here **/
 
   // Start the render loop
   tick();

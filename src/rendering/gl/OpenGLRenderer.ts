@@ -80,7 +80,7 @@ class OpenGLRenderer {
 
     this.render(camera, prog, drawables);
 
-    let data = new Uint8Array(this.canvas.width * this.canvas.height * 4);
+    let data: Uint8Array = new Uint8Array(this.canvas.width * this.canvas.height * 4);
     gl.readPixels(0, 0, this.canvas.width, this.canvas.height, gl.RGBA, gl.UNSIGNED_BYTE, data);
     gl.deleteFramebuffer(this.frameBuffer);
     return data;

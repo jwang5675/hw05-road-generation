@@ -58,34 +58,21 @@ float getPopulationMap(vec2 pos) {
 	return water == 0.0 ? 0.0 : fbm;
 }
 
-vec2 getQuadToMapPos() {
-	float originalX = (fs_Pos.x + 1.0) / 2.0;
-	float originalY = (fs_Pos.y + 1.0) / 2.0;
+vec2 getQuadToMapPos(float originalX, float originalY) {
 	float x = mix(-0.15, 0.35, originalX);
 	float y = mix(0.057, 0.557, originalY);
 	return vec2(x, y);
 }
 
-vec3 getMapTypeColor() {
-	vec2 mapPos = getQuadToMapPos();
-	if (u_Time == 0.0) {
-		return vec3(getWaterMap(mapPos));
-	}
-	if (u_Time == 1.0) {
-		return vec3(0, getElevationMap(mapPos), 0);
-	}
-	if (u_Time == 2.0) {
-		return vec3(0, 0, getPopulationMap(mapPos));
-	}
-	if (u_Time == 3.0) {
-		float elevationPos = getElevationMap(mapPos);
-		float populationPos = getPopulationMap(mapPos);
-		float addedValue = (elevationPos + populationPos) / 2.0;
-		return vec3(0, elevationPos, populationPos);
-	}
+vec3 getOutputTexture() {
+	// Return Format, (water fbm, elevation fbm, population fbm)
+	float x_position = (fs_Pos.x + 1.0) / 2.0;
+	float y_position = (fs_Pos.y + 1.0) / 2.0;
+	vec2 mapPos = getQuadToMapPos(x_position, y_position);
+	return vec3(getWaterMap(mapPos), getElevationMap(mapPos), getPopulationMap(mapPos));
 }
 
 void main() {
-	vec3 color = getMapTypeColor();
+	vec3 color = getOutputTexture();
 	out_Col = vec4(color, 1.0);
 }

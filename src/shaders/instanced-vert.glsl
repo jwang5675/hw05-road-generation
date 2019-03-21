@@ -12,18 +12,35 @@ in vec4 vs_Col; // An instanced rendering attribute; each particle instance has 
 in vec3 vs_Translate; // Another instance rendering attribute used to position each quad instance in the scene
 in vec2 vs_UV; // Non-instanced, and presently unused in main(). Feel free to use it for your meshes.
 
-out vec4 fs_Col;
+// Instance Rendering Columns
+in vec4 vs_TransformCol1;
+in vec4 vs_TransformCol2;
+in vec4 vs_TransformCol3;
+in vec4 vs_TransformCol4;
+
 out vec4 fs_Pos;
+out vec4 fs_Nor;
+out vec4 fs_Col;
 
-void main()
-{
-    fs_Col = vs_Col;
+// Assumes resolution is 2000 x 2000 throughout the program
+vec4 screenToQuad(vec4 pos) {
+    vec3 newPos = pos.xyz / 1000.0 - 1.0;
+    return vec4(newPos, 1.0);
+}
+
+mat4 getTransformationMatrix() {
+	return mat4(vs_TransformCol1, vs_TransformCol2, vs_TransformCol3, vs_TransformCol4);
+}
+
+void main() {
     fs_Pos = vs_Pos;
+    fs_Nor = vs_Nor;
+    fs_Col = vs_Col;
 
-    vec3 offset = vs_Translate;
-    offset.z = (sin((u_Time + offset.x) * 3.14159 * 0.1) + cos((u_Time + offset.y) * 3.14159 * 0.1)) * 1.5;
+    vec4 transformedPos = getTransformationMatrix() * vs_Pos;
+    vec4 quadPos = screenToQuad(transformedPos);
 
-    vec3 billboardPos = offset + vs_Pos.x * u_CameraAxes[0] + vs_Pos.y * u_CameraAxes[1];
-
-    gl_Position = u_ViewProj * vec4(billboardPos, 1.0);
+    // Everything is in x, z plane now, so we swap y and z coordinates
+    vec4 finalQuadPos = vec4(quadPos.x, quadPos.z, 0.0, 1.0);
+    gl_Position = finalQuadPos;
 }

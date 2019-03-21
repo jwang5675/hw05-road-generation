@@ -68,20 +68,23 @@ vec2 getQuadToMapPos() {
 
 vec3 getMapTypeColor() {
 	vec2 mapPos = getQuadToMapPos();
+	float waterValue = getWaterMap(mapPos);
+
+	if (waterValue == 0.0) {
+		return vec3(0.4, 0.7, 1);
+	}
+
 	if (u_Time == 0.0) {
-		return vec3(getWaterMap(mapPos));
+		return vec3(1, 1, 1);
 	}
 	if (u_Time == 1.0) {
 		return vec3(0, getElevationMap(mapPos), 0);
 	}
 	if (u_Time == 2.0) {
-		return vec3(0, 0, getPopulationMap(mapPos));
+		return vec3(getPopulationMap(mapPos), 0, 0);
 	}
 	if (u_Time == 3.0) {
-		float elevationPos = getElevationMap(mapPos);
-		float populationPos = getPopulationMap(mapPos);
-		float addedValue = (elevationPos + populationPos) / 2.0;
-		return vec3(0, elevationPos, populationPos);
+		return vec3(getPopulationMap(mapPos), getElevationMap(mapPos), 0);
 	}
 }
 
