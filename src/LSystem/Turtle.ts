@@ -16,16 +16,18 @@ export default class Turtle {
   points: Point[];
   edges: Edge[];
 
-  lengthTraveled: number;
+  iterations: number;
+  gridSize: number;
+  popThreshold: number;
 
   constructor(pos: Point, forward: vec3, up: vec3, right: vec3, q: quat, rd: number,
-              textureUtil: TextureUtil, points: Point[], edges: Edge[]) {
+              textureUtil: TextureUtil, points: Point[], edges: Edge[], 
+              iterations: number, gridSize: number, popThreshold: number) {
     this.position = pos;
 
     this.forward = forward;
     this.up = up;
     this.right = right;
-
     this.quaternion = q;
     this.recursionDepth = rd;
 
@@ -33,7 +35,9 @@ export default class Turtle {
     this.points = points;
     this.edges = edges;
 
-    this.lengthTraveled = this.globalGoals();
+    this.iterations = iterations;
+    this.gridSize = gridSize;
+    this.popThreshold = popThreshold;
   }
 
   rotateByUpAxis(degrees: number) {
@@ -60,20 +64,20 @@ export default class Turtle {
   // Checks if the local turtle satisfies local constraints (recursion limit, snap, water)
   localConstraints(expandedTurtle: Turtle) {
     // Recursion Limit Check
-    if (expandedTurtle.recursionDepth > 12) {
+    if (expandedTurtle.recursionDepth > this.iterations) {
       return null;
     }
 
+    // Out of Bounds Check
     if (this.position.position[0] < 0 || this.position.position[0] > 2000 ||
         this.position.position[2] < 0 || this.position.position[2] > 2000) {
       return null;
     }
 
-    // Line Segment Check
+    // Line Segment Intersection Check
     let feeler: vec3 = vec3.create();
     let translation: vec3 = vec3.fromValues(expandedTurtle.forward[0], expandedTurtle.forward[1], expandedTurtle.forward[2]);
     vec3.add(feeler, this.position.position, translation);
-
     for (let i: number = 0; i < this.edges.length; i++) {
       let currEdge: Edge = this.edges[i];
       let possibleIntersection: Point = currEdge.intersectionCheck(new Point(feeler), expandedTurtle.position);
@@ -94,7 +98,7 @@ export default class Turtle {
     // Point Snap Check
     for (let i: number = 0; i < this.points.length; i++) {
       let currPoint: Point = this.points[i];
-      if (expandedTurtle.position.withinCircle(currPoint.position, 0.5 * this.lengthTraveled)) {
+      if (expandedTurtle.position.withinCircle(currPoint.position, 0.5 * this.gridSize)) {
         expandedTurtle.position = currPoint;
         let newEdge = new Edge(this.position, expandedTurtle.position, false);
         this.edges.push(newEdge);
@@ -107,23 +111,16 @@ export default class Turtle {
       return null;
     }
 
+    // Density Check
+    if (this.textureUtil.getPopulation(expandedTurtle.position.position[0], expandedTurtle.position.position[2]) < this.popThreshold) {
+      return null;
+    }
+
     // Reach here if we create a new branching turtle
     this.points.push(expandedTurtle.position);
     let newEdge = new Edge(this.position, expandedTurtle.position, false);
     this.edges.push(newEdge);
     return expandedTurtle;
-  }
-
-  // Returns the length to move turtle based on the density
-  globalGoals() {
-    return 70;
-    // let populationDensity: number = this.textureUtil.getPopulation(this.position.position[0], this.position.position[2]);
-    // if (populationDensity > 0.6) {
-    //   return 50;
-    // } else {
-    //   let normalizedDensity = (populationDensity - 0.4) / 0.2;
-    //   return 50 + 50 * (1 - normalizedDensity);
-    // }
   }
 
   // Creates a copy turtle instance to add to the turtle stack
@@ -145,13 +142,14 @@ export default class Turtle {
     quat.copy(newQuat, this.quaternion);
  
     return new Turtle(newPoint, newFor, newUp, newRight, newQuat, this.recursionDepth + 1,
-                      this.textureUtil, this.points, this.edges);
+                      this.textureUtil, this.points, this.edges, 
+                      this.iterations, this.gridSize, this.popThreshold);
   }
 
   // Simple Manhattan Expansion Rule, expand 3 direction: forward, -right, + right
   expansionRule() {
     let expansionTurtles: Turtle[] = [];
-    let movementLength: number = this.lengthTraveled;
+    let movementLength: number = this.gridSize;
 
     let turtleUp: Turtle = this.createTurtleInstance();
     turtleUp.moveForward(movementLength);

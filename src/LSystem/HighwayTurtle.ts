@@ -21,9 +21,14 @@ export default class HighwayTurtle {
   points: Point[];
   edges: Edge[];
 
+  iterations: number;
+  gridSize: number;
+  popThreshold: number;
+
   constructor(point: Point, forward: vec3, up: vec3, right: vec3, q: quat,
               target: Point, rotationFlag: boolean, waterFlag: boolean, expandFlag: boolean,
-              textureUtil: TextureUtil, points: Point[], edges: Edge[]) {
+              textureUtil: TextureUtil, points: Point[], edges: Edge[], 
+              iterations: number, gridSize: number, popThreshold: number) {
     
     this.point = point;
     this.forward = vec3.fromValues(forward[0], forward[1], forward[2]);
@@ -39,6 +44,10 @@ export default class HighwayTurtle {
     this.textureUtil = textureUtil;
     this.points = points;
     this.edges = edges;
+
+    this.iterations = iterations;
+    this.gridSize = gridSize;
+    this.popThreshold = popThreshold;
 
     if (this.waterFlag) {
       let direction: vec3 = vec3.create();
@@ -122,9 +131,9 @@ export default class HighwayTurtle {
 
   // Simple Global Constraint by population density
   globalGoals(expandedPoint: Point) {
-    let xpos = expandedPoint.position[0] + 70 * this.forward[0];
-    let ypos = expandedPoint.position[1] + 70 * this.forward[1];
-    let zpos = expandedPoint.position[2] + 70 * this.forward[2];
+    let xpos = expandedPoint.position[0] + this.gridSize * this.forward[0];
+    let ypos = expandedPoint.position[1] + this.gridSize * this.forward[1];
+    let zpos = expandedPoint.position[2] + this.gridSize * this.forward[2];
     expandedPoint.position = vec3.fromValues(xpos, ypos, zpos);
   }
 
@@ -179,7 +188,8 @@ export default class HighwayTurtle {
 
     return new HighwayTurtle(newPoint, newFor, newUp, newRight, newQuat,
                              this.target, this.rotationFlag, this.waterFlag, false,
-                             this.textureUtil, this.points, this.edges);
+                             this.textureUtil, this.points, this.edges,
+                             this.iterations, this.gridSize, this.popThreshold);
   }
 
   createNextHighwayTurtleNewTarget(newPoint: Point, newTarget: Point) {
@@ -197,7 +207,8 @@ export default class HighwayTurtle {
 
     return new HighwayTurtle(newPoint, newFor, newUp, newRight, newQuat,
                              newTarget, this.rotationFlag, true, false,
-                             this.textureUtil, this.points, this.edges);
+                             this.textureUtil, this.points, this.edges, 
+                             this.iterations, this.gridSize, this.popThreshold);
   }
 
   roadTurtleConstraints(newOrigin: Point, expandedTurtle: Turtle) {
@@ -248,24 +259,25 @@ export default class HighwayTurtle {
     quat.copy(newQuat, this.quaternion);
  
     return new Turtle(newPoint, newFor, newUp, newRight, newQuat, 0,
-                      this.textureUtil, this.points, this.edges);
+                      this.textureUtil, this.points, this.edges,
+                      this.iterations, this.gridSize, this.popThreshold);
   }
 
   // Expands a road turtle off of a highway turtle
   roadTurtleExpansionRule(currExpansionTurtle: HighwayTurtle, validExpansionTurtles: any[]) {
     let branchRight = vec3.create();
-    branchRight = vec3.fromValues(currExpansionTurtle.point.position[0] + 70 * currExpansionTurtle.right[0], 
-                                  currExpansionTurtle.point.position[1] + 70 * currExpansionTurtle.right[1], 
-                                  currExpansionTurtle.point.position[2] + 70 * currExpansionTurtle.right[2]); 
+    branchRight = vec3.fromValues(currExpansionTurtle.point.position[0] + this.gridSize * currExpansionTurtle.right[0], 
+                                  currExpansionTurtle.point.position[1] + this.gridSize * currExpansionTurtle.right[1], 
+                                  currExpansionTurtle.point.position[2] + this.gridSize * currExpansionTurtle.right[2]); 
     let rightTurtle = this.roadTurtleConstraints(currExpansionTurtle.point, this.createRoadTurtle(branchRight));
     if (rightTurtle != null) {
       validExpansionTurtles.push(rightTurtle);
     }
 
     let branchLeft = vec3.create();
-    branchLeft = vec3.fromValues(currExpansionTurtle.point.position[0] - 70 * currExpansionTurtle.right[0], 
-                                 currExpansionTurtle.point.position[1] - 70 * currExpansionTurtle.right[1], 
-                                 currExpansionTurtle.point.position[2] - 70 * currExpansionTurtle.right[2]); 
+    branchLeft = vec3.fromValues(currExpansionTurtle.point.position[0] - this.gridSize * currExpansionTurtle.right[0], 
+                                 currExpansionTurtle.point.position[1] - this.gridSize * currExpansionTurtle.right[1], 
+                                 currExpansionTurtle.point.position[2] - this.gridSize * currExpansionTurtle.right[2]); 
     let leftTurtle = this.roadTurtleConstraints(currExpansionTurtle.point, this.createRoadTurtle(branchLeft));
     if (leftTurtle != null) {
       validExpansionTurtles.push(leftTurtle);

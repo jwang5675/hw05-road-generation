@@ -17,7 +17,14 @@ export default class LSystem {
 		this.edges = [];
 	}
 
-	generateHighway() {
+	// Simulate the road generation L-System once based on number of iterations
+	simulate(iterations: number, gridSize: number, popThreshold: number) {
+		console.log("Starting L-System");
+
+		this.points = [];
+		this.edges = [];
+
+		// Turtle stack to hold highway turtles and road turtles
 		let turtleStack: any[] = [];
 
 		// Start Highway Turtle L-System
@@ -30,64 +37,27 @@ export default class LSystem {
 		let target1: Point = new Point(vec3.fromValues(0, 0, 950));
 		let highwayTurtle1: HighwayTurtle = new HighwayTurtle(startingPoint, forward, up, right, q,
 																													target1, true, false, true,
-																													this.textureUtil, this.points, this.edges);
+																													this.textureUtil, this.points, this.edges,
+																													iterations, gridSize * 10, popThreshold);
 		highwayTurtle1.rotateByUpAxis(-45);	
 
 		let target2: Point = new Point(vec3.fromValues(850, 0, 2000));
 		let highwayTurtle2: HighwayTurtle = new HighwayTurtle(startingPoint, forward, up, right, q,
 																													target2, false, false, true,
-																													this.textureUtil, this.points, this.edges);
+																													this.textureUtil, this.points, this.edges,
+																													iterations, gridSize * 10, popThreshold);
 
 		turtleStack.push(highwayTurtle1);
 		turtleStack.push(highwayTurtle2);
 
+		// Run BFS on the turtle grid network
 		while (turtleStack.length != 0) {
-			let currTurtle = turtleStack.pop();
+			let currTurtle = turtleStack.shift();
 			let expandedTurtles = currTurtle.simulate();
 			for (let i: number = 0; i < expandedTurtles.length; i++) {
 				turtleStack.push(expandedTurtles[i]);
 			}
 		}
-	}
-
-	generateRoads() {
-		let startPoint1: Point = new Point(vec3.fromValues(487, 0, 821));
-		this.points.push(startPoint1);
-		let forward1: vec3 = vec3.fromValues(0, 0, 1);
-		let up1: vec3 = vec3.fromValues(0, 1, 0);
-		let right1: vec3 = vec3.fromValues(0, 0, 1);
-		let q1: quat = quat.fromValues(0, 0, 0, 1);
-		let roadTurtle1: Turtle = new Turtle(startPoint1, forward1, up1, right1, q1, 0,
-																				this.textureUtil, this.points, this.edges);
-
-		//let startPoint2: Point = new Point(vec3.fromValues(1500, 0, 1500));
-		let startPoint2: Point = new Point(vec3.fromValues(900, 0, 1650));
-		this.points.push(startPoint1);
-		let forward2: vec3 = vec3.fromValues(0, 0, 1);
-		let up2: vec3 = vec3.fromValues(0, 1, 0);
-		let right2: vec3 = vec3.fromValues(0, 0, 1);
-		let q2: quat = quat.fromValues(0, 0, 0, 1);
-		let roadTurtle2: Turtle = new Turtle(startPoint2, forward2, up2, right2, q2, 0,
-																				this.textureUtil, this.points, this.edges);
-
-		let turtleStack: Turtle[] = [];
-		turtleStack.push(roadTurtle1);
-		turtleStack.push(roadTurtle2);
-
-		while (turtleStack.length != 0) {
-			let currTurtle: Turtle = turtleStack.shift();
-			let possibleExpansionTurtles: Turtle[] = currTurtle.simulate();
-			for (let i: number = 0; i < possibleExpansionTurtles.length; i++) {
-				turtleStack.push(possibleExpansionTurtles[i]);
-			}
-		}
-
-	}
-
-	// Simulate the road generation L-System once based on number of iterations
-	simulate(iterations: number) {
-		this.generateHighway();
-		//this.generateRoads();
 	}
 
 	// Returns the VBO Data from the current iteration of the LSystem

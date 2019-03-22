@@ -9,6 +9,8 @@ import {setGL} from './globals';
 import ShaderProgram, {Shader} from './rendering/gl/ShaderProgram';
 import LSystem from './LSystem/LSystem';
 
+let changed: boolean = true;
+
 // Define an object with application parameters and button callbacks
 // This will be referred to by dat.GUI's functions that add GUI elements.
 const controls = {
@@ -16,6 +18,9 @@ const controls = {
   'Show Elevation': showElevation,
   'Show Population Density': showPopulationDensity,
   'Elevation & Pop Density': showElevationAndDensity,
+  'Iterations': 15,
+  'Grid Size': 3,
+  'Pop Threshold': 0.4,
 };
 
 let mapVal: number = 0;
@@ -50,9 +55,9 @@ function loadScene() {
 
 function runLSystem() {
   // Simulate LSystem with number of iterations
-  lsystem.simulate(0);
+  lsystem.simulate(controls['Iterations'], controls['Grid Size'], controls['Pop Threshold']);
 
-  // Instance Render the road data
+  // Instance Render the street data
   let vboData: any = lsystem.getVBOData();
   square.setInstanceVBOsFullTransform(vboData.col1, vboData.col2, vboData.col3, vboData.col4, vboData.colors);
   square.setNumInstances(vboData.col1.length / 4.0);
@@ -73,6 +78,18 @@ function main() {
   gui.add(controls, 'Show Elevation');
   gui.add(controls, 'Show Population Density');
   gui.add(controls, 'Elevation & Pop Density');
+  gui.add(controls, 'Iterations', 0, 20).step(1).onChange(
+    function() {
+      changed = true;
+    }.bind(this));
+  gui.add(controls, 'Grid Size', 3, 10).step(1).onChange(
+    function() {
+      changed = true;
+    }.bind(this));
+  gui.add(controls, 'Pop Threshold', 0, 1).step(0.05).onChange(
+    function() {
+      changed = true;
+    }.bind(this));
 
 
   // get canvas and webgl context
@@ -110,7 +127,10 @@ function main() {
     camera.update();
     stats.begin();
 
-    //runLSystem();
+    if (changed) {
+      changed = false;
+      runLSystem();
+    }
 
     instancedShader.setTime(time);
     flat.setTime(mapVal);
@@ -155,7 +175,6 @@ function main() {
   let textureData: Uint8Array = textureRenderer.renderTexture(camera, textureShader, [screenQuad]);
 
   lsystem = new LSystem(textureData);
-  runLSystem();
   /** Texture Renderer and LSystem Setup End Here **/
 
   // Start the render loop
