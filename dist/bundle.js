@@ -16829,10 +16829,10 @@ class LSystem {
         let up = __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["d" /* vec3 */].fromValues(0, 1, 0);
         let q = __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["c" /* quat */].fromValues(0, 0, 0, 1);
         let target1 = new __WEBPACK_IMPORTED_MODULE_1__lsystem_Point__["a" /* default */](__WEBPACK_IMPORTED_MODULE_0_gl_matrix__["d" /* vec3 */].fromValues(0, 0, 950));
-        let highwayTurtle1 = new __WEBPACK_IMPORTED_MODULE_3__lsystem_HighwayTurtle__["a" /* default */](startingPoint, forward, up, right, q, target1, true, false, true, this.textureUtil, this.points, this.edges, iterations, gridSize * 10, popThreshold);
+        let highwayTurtle1 = new __WEBPACK_IMPORTED_MODULE_3__lsystem_HighwayTurtle__["a" /* default */](startingPoint, forward, up, right, q, target1, true, false, false, this.textureUtil, this.points, this.edges, iterations, gridSize * 10, popThreshold);
         highwayTurtle1.rotateByUpAxis(-45);
         let target2 = new __WEBPACK_IMPORTED_MODULE_1__lsystem_Point__["a" /* default */](__WEBPACK_IMPORTED_MODULE_0_gl_matrix__["d" /* vec3 */].fromValues(850, 0, 2000));
-        let highwayTurtle2 = new __WEBPACK_IMPORTED_MODULE_3__lsystem_HighwayTurtle__["a" /* default */](startingPoint, forward, up, right, q, target2, false, false, true, this.textureUtil, this.points, this.edges, iterations, gridSize * 10, popThreshold);
+        let highwayTurtle2 = new __WEBPACK_IMPORTED_MODULE_3__lsystem_HighwayTurtle__["a" /* default */](startingPoint, forward, up, right, q, target2, false, false, false, this.textureUtil, this.points, this.edges, iterations, gridSize * 10, popThreshold);
         turtleStack.push(highwayTurtle1);
         turtleStack.push(highwayTurtle2);
         // Run BFS on the turtle grid network
@@ -17003,10 +17003,11 @@ class HighwayTurtle {
             return null;
         }
         // check if our turtle is near our target, end search if we reach it
-        if (this.target.withinCircle(turtle.point.position, 50)) {
+        if (this.target.withinCircle(turtle.point.position, this.gridSize)) {
             let newEdge = new __WEBPACK_IMPORTED_MODULE_2__lsystem_Edge__["a" /* default */](this.point, this.target, true);
             this.points.push(this.target);
             this.edges.push(newEdge);
+            this.expandFlag = true;
             return null;
         }
         // Check if the current turtle can walk on water
@@ -17050,8 +17051,7 @@ class HighwayTurtle {
         expansionTurtles.push(this.createNextHighwayTurtle(expandedPoint));
         return expansionTurtles;
     }
-    expansionRuleFirstExpansion() {
-        let expansionTurtles = [];
+    expansionRuleFirstExpansion(expansionTurtles) {
         if (this.expandFlag && !this.waterFlag) {
             if (!this.rotationFlag) {
                 let cityCenter0 = new __WEBPACK_IMPORTED_MODULE_1__lsystem_Point__["a" /* default */](__WEBPACK_IMPORTED_MODULE_0_gl_matrix__["d" /* vec3 */].fromValues(420, 0, 1890));
@@ -17067,7 +17067,6 @@ class HighwayTurtle {
                 expansionTurtles.push(this.createNextHighwayTurtleNewTarget(cityCenter3, cityCenter5));
             }
         }
-        return expansionTurtles;
     }
     createNextHighwayTurtle(newPoint) {
         let newFor = __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["d" /* vec3 */].create();
@@ -17148,7 +17147,7 @@ class HighwayTurtle {
     // Returns a list of the next turtles that spawn from the current turtle
     simulate() {
         let possibleExpansionTurtles = this.expansionRule();
-        let validExpansionTurtles = this.expansionRuleFirstExpansion();
+        let validExpansionTurtles = [];
         for (let i = 0; i < possibleExpansionTurtles.length; i++) {
             let currExpansionTurtle = this.localConstraints(possibleExpansionTurtles[i]);
             // Adds new highway turtle to expanded turtles returned
@@ -17163,6 +17162,7 @@ class HighwayTurtle {
                 }
             }
         }
+        this.expansionRuleFirstExpansion(validExpansionTurtles);
         return validExpansionTurtles;
     }
 }
