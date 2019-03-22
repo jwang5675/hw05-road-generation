@@ -1,9 +1,15 @@
 # Homework 5: Road Generation
 
-For this assignment, you will generate a network of roads to form the basis of a city using a modified version of L-systems. As in homework 4, you will be using instanced rendering to draw your road networks.
+Jason Wang (jasonwa)
 
-## Base Code
-We have provided the same code that came with homework 4, but you will likely want to use most of your code from that assignment. Feel free to copy over as much of your homework 4 implementation as you want. We have also provided [Procedural Modeling of Cities](proceduralCityGeneration.pdf), a brief technical paper describing techniques for generating road networks. Refer to this as you implement the sections below.
+External Resources:
+- [Procedural Modeling of Cities](proceduralCityGeneration.pdf) paper implementation 
+- Line segment intersection check supporting parallel lines, from https://stackoverflow.com/questions/563198/how-do-you-detect-where-two-line-segments-intersect
+
+Demo (make your window have a 1:1 aspect ratio for best results) : https://jwang5675.github.io/hw05-road-generation/
+
+![](images/elepop.png)
+
 
 ## Assignment Requirements
 - __(10 points)__ Use whatever noise functions suit you to generate 2D map data of the following information, and set up GUI toggles to render each map on a 2D screen quadrangle. The user should have the option to view both overlaid on each other.
