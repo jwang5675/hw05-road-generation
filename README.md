@@ -39,7 +39,7 @@ Demo (make your window have a 1:1 aspect ratio for best results) : https://jwang
   - The only roads that can cross water are the thicker highways
   - Roads are self sensitive as described in 3.3.1.
     - Roads implement line segment intersection for interseciton/extension, example: ![](images/intersect.png)
-    - Roads implement snapping to a nearby point, example ![](images/snap.png)
+    - Roads implement snapping to a nearby point, example ![](images/pointsnap.png)
 
 - Interactive GUI:
   - Changing # of iterations the LSystem Completes (Highways are always completed)
