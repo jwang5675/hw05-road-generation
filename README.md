@@ -52,13 +52,13 @@ Demo (make your window have a 1:1 aspect ratio for best results) : https://jwang
 - __(Interactive GUI)__
   - Changing # of iterations the LSystem Completes (Highways are always completed)
     - 1 Iteration
-    ![](images/it1.png)
+    ![](images/1itr.png)
     - 2 Iterations
-    ![](images/itr2.png)
+    ![](images/2itr.png)
     - 5 Iterations
-    ![](images/itr5.png)
+    ![](images/5itr.png)
     - 10 Iterations
-    ![](images/itr10.png)
+    ![](images/10itr.png)
     - 15 Iterations
     ![](images/elepop.png)
   - Changing Grid Size (Highways are always completed)
