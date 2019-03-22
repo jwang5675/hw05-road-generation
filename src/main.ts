@@ -7,7 +7,7 @@ import OpenGLRenderer from './rendering/gl/OpenGLRenderer';
 import Camera from './Camera';
 import {setGL} from './globals';
 import ShaderProgram, {Shader} from './rendering/gl/ShaderProgram';
-import LSystem from './LSystem/LSystem';
+import LSystem from './lsystem/LSystem';
 
 let changed: boolean = true;
 
