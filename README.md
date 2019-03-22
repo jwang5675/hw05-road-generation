@@ -27,6 +27,20 @@ Demo (make your window have a 1:1 aspect ratio for best results) : https://jwang
 
 - Class Set to Represent LSystems
 
+- Drawing Road Rules
+  - Supports:
+    - Basic Road Branching: the roads cutoff and do not expand after some specified population threshold defined by the user in the GUI (see below)
+    - Checkered Road Branching: the roads all branch off of the highways' forward, up, and right vectors at 90 degrees with a specified maximum width and length based on the grid size defined by the user in the GUI (see below)
+
+- 2D Street Layout
+  - Highways are generate and are sparse throughout the scene
+  - As the highways are being built, the spawn smaller and thinner road networks with specified denseness based on the user input grid size and population density threshold
+  - The smaller roads follow checkered 90 degree and population thrshold cuttoff branching
+  - The only roads that can cross water are the thicker highways
+  - Roads are self sensitive as described in 3.3.1.
+    - Roads implement line segment intersection for interseciton/extension, example: ![](images/intersect.png)
+    - Roads implement snapping to a nearby point, example ![](images/snap.png)
+
 - Interactive GUI:
   - Changing # of iterations the LSystem Completes (Highways are always completed)
     - 1 Iteration

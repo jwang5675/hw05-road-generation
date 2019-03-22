@@ -36,14 +36,14 @@ export default class LSystem {
 
 		let target1: Point = new Point(vec3.fromValues(0, 0, 950));
 		let highwayTurtle1: HighwayTurtle = new HighwayTurtle(startingPoint, forward, up, right, q,
-																													target1, true, false, true,
+																													target1, true, false, false,
 																													this.textureUtil, this.points, this.edges,
 																													iterations, gridSize * 10, popThreshold);
 		highwayTurtle1.rotateByUpAxis(-45);	
 
 		let target2: Point = new Point(vec3.fromValues(850, 0, 2000));
 		let highwayTurtle2: HighwayTurtle = new HighwayTurtle(startingPoint, forward, up, right, q,
-																													target2, false, false, true,
+																													target2, false, false, false,
 																													this.textureUtil, this.points, this.edges,
 																													iterations, gridSize * 10, popThreshold);
 

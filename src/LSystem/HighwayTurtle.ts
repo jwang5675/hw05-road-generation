@@ -94,10 +94,11 @@ export default class HighwayTurtle {
     }
 
     // check if our turtle is near our target, end search if we reach it
-    if (this.target.withinCircle(turtle.point.position, 50)) {
+    if (this.target.withinCircle(turtle.point.position, this.gridSize)) {
       let newEdge = new Edge(this.point, this.target, true);
       this.points.push(this.target);
       this.edges.push(newEdge);
+      this.expandFlag = true;
       return null;
     }
 
@@ -149,8 +150,7 @@ export default class HighwayTurtle {
     return expansionTurtles;
   }
 
-  expansionRuleFirstExpansion() {
-    let expansionTurtles = [];
+  expansionRuleFirstExpansion(expansionTurtles: any[]) {
     if (this.expandFlag && !this.waterFlag) {
       if (!this.rotationFlag) {
         let cityCenter0: Point = new Point(vec3.fromValues(420, 0, 1890));
@@ -170,7 +170,6 @@ export default class HighwayTurtle {
         expansionTurtles.push(this.createNextHighwayTurtleNewTarget(cityCenter3, cityCenter5));
       }
     }
-    return expansionTurtles;
   }
 
   createNextHighwayTurtle(newPoint: Point) {
@@ -287,7 +286,7 @@ export default class HighwayTurtle {
   // Returns a list of the next turtles that spawn from the current turtle
   simulate(): any[] {
     let possibleExpansionTurtles: any[] = this.expansionRule();
-    let validExpansionTurtles: any[] = this.expansionRuleFirstExpansion();
+    let validExpansionTurtles: any[] = [];
 
     for (let i: number = 0; i < possibleExpansionTurtles.length; i++) {
       let currExpansionTurtle = this.localConstraints(possibleExpansionTurtles[i]);
@@ -306,6 +305,7 @@ export default class HighwayTurtle {
       }
     }
 
+    this.expansionRuleFirstExpansion(validExpansionTurtles);
     return validExpansionTurtles;
   }
 }
